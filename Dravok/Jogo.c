@@ -1,0 +1,264 @@
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_primitives.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_image.h>
+
+typedef enum {
+    CIMA,
+    BAIXO,
+    ESQUERDA,
+    DIREITA
+} Direcao;
+
+#define TAM 64
+
+int mapa[12][20] = {
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
+    {1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+    {1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1},
+    {1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1},
+    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
+};
+
+
+bool dentro_area(int x, int y) {
+    int player_w = 96;
+    int player_h = 96;
+
+    int tile_x = x / TAM;
+    int tile_y = y / TAM;
+
+    if (tile_x < 0 || tile_x >= 20 || tile_y < 0 || tile_y >= 12)
+        return false;
+
+    if (mapa[tile_y][tile_x] == 1)
+        return false;
+
+    return true;
+}
+
+typedef struct {
+    int x;
+    int y;
+} Posicao;
+
+typedef struct {
+    Posicao pos;
+    int frame;
+    int linha;
+} Personagem;
+
+Personagem npcs[2];
+
+int main() {
+
+  
+
+    al_init();
+    al_init_primitives_addon();
+    al_install_keyboard();
+    al_init_font_addon();
+    al_init_image_addon();
+
+    ALLEGRO_FONT* font = al_create_builtin_font();
+    ALLEGRO_DISPLAY* display = al_create_display(1280, 720);
+
+    Personagem player = { {100, 300}, 0, 0 };
+
+    int frame_delay = 0;
+
+    int npc_x = 800, npc_y = 160;
+
+    npcs[0].pos.x = 800;
+    npcs[0].pos.y = 160;
+
+    npcs[1].pos.x = 400;
+    npcs[1].pos.y = 200;
+
+    int* numeros = malloc(10 * sizeof(int));
+    for (int i = 0; i < 10; i++) numeros[i] = i;
+    free(numeros);
+
+    Personagem* npc_ptr = malloc(sizeof(Personagem));
+    npc_ptr->pos.x = 500;
+    npc_ptr->pos.y = 200;
+    free(npc_ptr);
+
+    char* falas[] = {
+        "Velho: ...",
+        "Player: Ei!",
+        "Player: Foi você, né?",
+        "Velho: ...",
+        "Player: Você que me trouxe pra cá!",
+        "Velho: Eu não trouxe ninguém.",
+        "Player: Então como eu vim parar aqui?!",
+        "Velho: As suas escolhas te trouxeram.",
+        "Player: Que escolhas? Eu não fiz nada!",
+        "Velho: Fez.",
+        "Player: Eu só tava vivendo minha vida!",
+        "Velho: Exatamente.",
+        "Player: ...",
+        "Player: Onde eu tô?",
+        "Velho: Em um mundo que não é mais o seu.",
+        "Player: Isso é impossível.",
+        "Velho: Você sempre disse isso, não disse?",
+        "Player: ...",
+        "Player: Isso não pode ser real.",
+        "Velho: E ainda assim, você está aqui.",
+        "Player: ...",
+        "Player: Eu não acredito nessas coisas.",
+        "Velho: Nunca acreditou.",
+        "Player: Então por que eu?",
+        "Velho: Por que não você?",
+        "Player: Isso não responde nada!",
+        "Velho: Nem tudo precisa de resposta imediata.",
+        "Player: ...",
+        "Player: Mas eu não escolhi isso.",
+        "Velho: Assim como todos que chegam aqui.",
+        "Velho: Mas não podemos decidir isso...",
+        "Velho: Só podemos decidir o que fazer com o tempo que nos é dado.",
+        "Player: ...",
+        "Player: Então o que você quer que eu faça?",
+        "Velho: Nada.",
+        "Velho: Faça o que quiser.",
+        "Velho: Mas faça alguma coisa.",
+        "Player: ...",
+        "Player: E você?",
+        "Player: Vai só ficar aí?",
+        "Velho: Está informação não lhe convem."
+    };
+
+    int total_falas = sizeof(falas) / sizeof(falas[0]);
+    int fala_atual = 0;
+
+    int npc_frame = 0;
+    int npc_delay = 0;
+    int npc_linha = 0;
+
+    bool em_dialogo = false;
+    bool npc_ativo = true;
+
+    ALLEGRO_BITMAP* player_bitmap = al_load_bitmap("Personagem.png");
+    ALLEGRO_BITMAP* velho = al_load_bitmap("Velho.png");
+    ALLEGRO_BITMAP* vila = al_load_bitmap("Casa.jpeg");
+
+    while (1) {
+
+        ALLEGRO_KEYBOARD_STATE estado;
+        al_get_keyboard_state(&estado);
+
+        Direcao direcao; 
+
+        bool andando = false;
+
+        int novo_x = player.pos.x;
+        int novo_y = player.pos.y;
+
+        if (!em_dialogo) {
+            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true; player.linha = 2; direcao = CIMA; }
+            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true; player.linha = 0; direcao = BAIXO; }
+            if (al_key_down(&estado, ALLEGRO_KEY_A)) { novo_x -= 5; andando = true; player.linha = 1; direcao = ESQUERDA; }
+            if (al_key_down(&estado, ALLEGRO_KEY_D)) { novo_x += 5; andando = true; player.linha = 3; direcao = DIREITA; }
+        }
+
+        if (dentro_area(novo_x, player.pos.y)) {
+            player.pos.x = novo_x;
+        }
+
+        if (dentro_area(player.pos.x, novo_y)) {
+            player.pos.y = novo_y;
+        }
+
+        npc_delay++;
+        if (npc_delay > 30) {
+            npc_frame++;
+            npc_delay = 0;
+            if (npc_frame > 3) npc_frame = 0;
+        }
+
+        if (andando) {
+            frame_delay++;
+            if (frame_delay > 15) {
+                player.frame++;
+                frame_delay = 0;
+                if (player.frame > 3) player.frame = 0;
+            }
+        }
+        else {
+            player.frame = 0;
+        }
+
+        if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE)) break;
+
+        bool perto = false;
+
+        if (npc_ativo && abs(player.pos.x - npc_x) < 40 && abs(player.pos.y - npc_y) < 40) {
+            perto = true;
+        }
+
+        static bool e_antes = false;
+
+        if (perto && al_key_down(&estado, ALLEGRO_KEY_E)) {
+            if (!e_antes) em_dialogo = true;
+            e_antes = true;
+        }
+        else {
+            e_antes = false;
+        }
+
+        static bool enter_antes = false;
+
+        if (em_dialogo) {
+            if (al_key_down(&estado, ALLEGRO_KEY_ENTER)) {
+                if (!enter_antes) {
+                    fala_atual++;
+                    if (fala_atual >= total_falas) {
+                        em_dialogo = false;
+                        fala_atual = 0;
+                        npc_ativo = false;
+                    }
+                }
+                enter_antes = true;
+            }
+            else {
+                enter_antes = false;
+            }
+        }
+
+        al_clear_to_color(al_map_rgb(255, 255, 255));
+
+        al_draw_scaled_bitmap(vila, 0, 0, 1536, 1024, 0, 0, 1280, 720, 0);
+
+        int frame_w = 256;
+        int frame_h = 256;
+
+        al_draw_scaled_bitmap(player_bitmap, player.frame * frame_w, player.linha * frame_h, frame_w, frame_h, player.pos.x, player.pos.y, 96, 96, 0);
+
+        int npc_w = 256;
+        int npc_h = 341;
+
+        al_draw_scaled_bitmap(velho, npc_frame * npc_w, npc_linha * npc_h, npc_w, npc_h, npc_x, npc_y, 80, 80, 0);
+
+        if (perto) {
+            al_draw_text(font, al_map_rgb(255, 255, 255), 100, 30, 0, "Pressione E");
+        }
+
+        if (em_dialogo) {
+            al_draw_filled_rectangle(50, 450, 750, 580, al_map_rgb(0, 0, 0));
+            al_draw_text(font, al_map_rgb(255, 255, 255), 60, 460, 0, falas[fala_atual]);
+        }
+
+        al_flip_display();
+        al_rest(0.016);
+    }
+
+    al_destroy_display(display);
+    return 0;
+}

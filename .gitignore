@@ -1,6 +1,10 @@
 # Prerequisites
 *.d
 
+packages/
+x64/
+*.zip
+*.slnx
 # Object files
 *.o
 *.ko
