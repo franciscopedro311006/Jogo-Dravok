@@ -54,7 +54,21 @@ typedef struct {
     int frame;
     int linha;
 } Personagem;
+void ordenar_npcs(Personagem npcs[], int tamanho){
 
+    for(int i = 0; i < tamanho - 1; i++){
+
+        for(int j = 0; j < tamanho - 1 - i; j++){
+
+            if(npcs[j].pos.x > npcs[j+1].pos.x){
+
+                Personagem temp = npcs[j];
+                npcs[j] = npcs[j+1];
+                npcs[j+1] = temp;
+            }
+        }
+    }
+}
 typedef struct {
     int x;
     int y;
