@@ -1,0 +1,41 @@
+Velho: ...
+Player: Ei!
+Player: Foi você, né?
+Velho: ...
+Player: Você que me trouxe pra cá!
+Velho: Eu não trouxe ninguém.
+Player: Então como eu vim parar aqui?!
+Velho: As suas escolhas te trouxeram.
+Player: Que escolhas? Eu não fiz nada!
+Velho: Fez.
+Player: Eu só tava vivendo minha vida!
+Velho: Exatamente.
+Player: ...
+Player: Onde eu tô?
+Velho: Em um mundo que não é mais o seu.
+Player: Isso é impossível.
+Velho: Você sempre disse isso, não disse?
+Player: ...
+Player: Isso não pode ser real.
+Velho: E ainda assim, você está aqui.
+Player: ...
+Player: Eu não acredito nessas coisas.
+Velho: Nunca acreditou.
+Player: Então por que eu?
+Velho: Por que não você?
+Player: Isso não responde nada!
+Velho: Nem tudo precisa de resposta imediata.
+Player: ...
+Player: Mas eu não escolhi isso.
+Velho: Assim como todos que chegam aqui.
+Velho: Mas não podemos decidir isso...
+Velho: Só podemos decidir o que fazer com o tempo que nos é dado.
+Player: ...
+Player: Então o que você quer que eu faça?
+Velho: Nada.
+Velho: Faça o que quiser.
+Velho: Mas faça alguma coisa.
+Player: ...
+Player: E você?
+Player: Vai só ficar aí?
+Velho: Esta informação não lhe convém.
