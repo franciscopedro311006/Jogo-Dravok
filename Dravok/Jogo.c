@@ -16,7 +16,7 @@ typedef enum {
 
 #define TAM 64
 
-int mapa[12][20] = {
+int mapa[8][20] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1},
@@ -35,7 +35,7 @@ bool dentro_area(int x, int y) {
     int tile_x = x / TAM;
     int tile_y = y / TAM;
 
-    if (tile_x < 0 || tile_x >= 20 || tile_y < 0 || tile_y >= 12)
+    if (tile_x < 0 || tile_x >= 20 || tile_y < 0 || tile_y >= 8)
         return false;
 
     if (mapa[tile_y][tile_x] == 1)
@@ -54,6 +54,13 @@ typedef struct {
     int frame;
     int linha;
 } Personagem;
+
+typedef struct {
+    int x;
+    int y;
+    int largura;
+    int altura;
+} Hitbox;
 
 Personagem npcs[2];
 
@@ -91,51 +98,26 @@ int main() {
     npc_ptr->pos.y = 200;
     free(npc_ptr);
 
-    char* falas[] = {
-        "Velho: ...",
-        "Player: Ei!",
-        "Player: Foi você, né?",
-        "Velho: ...",
-        "Player: Você que me trouxe pra cá!",
-        "Velho: Eu não trouxe ninguém.",
-        "Player: Então como eu vim parar aqui?!",
-        "Velho: As suas escolhas te trouxeram.",
-        "Player: Que escolhas? Eu não fiz nada!",
-        "Velho: Fez.",
-        "Player: Eu só tava vivendo minha vida!",
-        "Velho: Exatamente.",
-        "Player: ...",
-        "Player: Onde eu tô?",
-        "Velho: Em um mundo que não é mais o seu.",
-        "Player: Isso é impossível.",
-        "Velho: Você sempre disse isso, não disse?",
-        "Player: ...",
-        "Player: Isso não pode ser real.",
-        "Velho: E ainda assim, você está aqui.",
-        "Player: ...",
-        "Player: Eu não acredito nessas coisas.",
-        "Velho: Nunca acreditou.",
-        "Player: Então por que eu?",
-        "Velho: Por que não você?",
-        "Player: Isso não responde nada!",
-        "Velho: Nem tudo precisa de resposta imediata.",
-        "Player: ...",
-        "Player: Mas eu não escolhi isso.",
-        "Velho: Assim como todos que chegam aqui.",
-        "Velho: Mas não podemos decidir isso...",
-        "Velho: Só podemos decidir o que fazer com o tempo que nos é dado.",
-        "Player: ...",
-        "Player: Então o que você quer que eu faça?",
-        "Velho: Nada.",
-        "Velho: Faça o que quiser.",
-        "Velho: Mas faça alguma coisa.",
-        "Player: ...",
-        "Player: E você?",
-        "Player: Vai só ficar aí?",
-        "Velho: Está informação não lhe convem."
-    };
+    //troquei o vetor de char enorme com o dialogo por um arquivo txt com o dialogo nele;
+    char falas[100] [200];
+    FILE* file = fopen("dialogo.txt", "r");
+    int total_falas = 0;
 
-    int total_falas = sizeof(falas) / sizeof(falas[0]);
+    if (file == NULL) {
+        printf("Erro ao abrir dialogo.txt");
+        return 1;
+    }
+
+    while (fgets(falas[total_falas], 200, file) != NULL) {
+
+        falas[total_falas][strcspn(falas[total_falas], "\n")] = 0;
+
+        total_falas++;
+    }
+
+    fclose(file);
+
+   
     int fala_atual = 0;
 
     int npc_frame = 0;
@@ -157,6 +139,8 @@ int main() {
         Direcao direcao; 
 
         bool andando = false;
+
+        Hitbox hit_player = {player.pos.x + 50, player.pos.y + 25, 35, 65};
 
         int novo_x = player.pos.x;
         int novo_y = player.pos.y;
@@ -222,7 +206,7 @@ int main() {
                     if (fala_atual >= total_falas) {
                         em_dialogo = false;
                         fala_atual = 0;
-                        npc_ativo = false;
+                        //npc_ativo = false;
                     }
                 }
                 enter_antes = true;
@@ -240,6 +224,8 @@ int main() {
         int frame_h = 256;
 
         al_draw_scaled_bitmap(player_bitmap, player.frame * frame_w, player.linha * frame_h, frame_w, frame_h, player.pos.x, player.pos.y, 96, 96, 0);
+
+        al_draw_rectangle(hit_player.x, hit_player.y, hit_player.x + hit_player.largura, hit_player.y + hit_player.altura, al_map_rgb(255, 0, 0), 2);
 
         int npc_w = 256;
         int npc_h = 341;
