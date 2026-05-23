@@ -291,7 +291,6 @@ else {
                     if (fala_atual >= total_falas) {
                         em_dialogo = false;
                         fala_atual = 0;
-                        skeleton.vivo = true;
                         //npc_ativo = false;
                     }
                 }
