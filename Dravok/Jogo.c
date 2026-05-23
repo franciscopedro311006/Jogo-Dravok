@@ -209,6 +209,7 @@ if (al_key_down(&estado, ALLEGRO_KEY_SPACE)) {
             if (skeleton.vida <= 0) {
 
                 skeleton.vivo = false;
+                skeleton.vida = 60;
 
                 printf("Esqueleto derrotado!\n");
             }
@@ -397,8 +398,15 @@ al_draw_rectangle(
 
         al_flip_display();
         al_rest(0.016);
-    }
+    } 
+    
+al_destroy_bitmap(player_bitmap);
+al_destroy_bitmap(velho);
+al_destroy_bitmap(vila);
+al_destroy_bitmap(esqueleto_bitmap);
 
+al_destroy_font(font);
+    
     al_destroy_display(display);
     return 0;
 }
