@@ -52,8 +52,26 @@ typedef struct {
     Posicao pos;
     int frame;
     int linha;
+    int vida;
+    int dano;
+    bool vivo;
+    bool atacando;
 } Personagem;
+void ordenar_npcs(Personagem npcs[], int tamanho){
 
+    for(int i = 0; i < tamanho - 1; i++){
+
+        for(int j = 0; j < tamanho - 1 - i; j++){
+
+            if(npcs[j].pos.x > npcs[j+1].pos.x){
+
+                Personagem temp = npcs[j];
+                npcs[j] = npcs[j+1];
+                npcs[j+1] = temp;
+            }
+        }
+    }
+}
 typedef struct {
     int x;
     int y;
@@ -77,10 +95,20 @@ int main() {
     ALLEGRO_DISPLAY* display = al_create_display(1280, 720);
 
     Personagem player = { {100, 300}, 0, 0 };
+    player.vida = 100;
+    player.dano = 20;
+    player.vivo = true;
+    player.atacando = false;
 
     int frame_delay = 0;
 
     int npc_x = 800, npc_y = 160;
+
+    Personagem skeleton = { {600,300}, 0, 0 };
+    skeleton.vida = 60;
+    skeleton.dano = 10;
+    skeleton.vivo = true;
+    skeleton.atacando = false;
 
     npcs[0].pos.x = 800;
     npcs[0].pos.y = 160;
@@ -131,6 +159,8 @@ int main() {
     ALLEGRO_BITMAP* player_bitmap = al_load_bitmap("Personagem.png");
     ALLEGRO_BITMAP* velho = al_load_bitmap("Velho.png");
     ALLEGRO_BITMAP* vila = al_load_bitmap("Casa.jpeg");
+    ALLEGRO_BITMAP* esqueleto_bitmap = al_load_bitmap("Esqueleto.png");
+    
 
     while (1) {
 
@@ -160,6 +190,61 @@ int main() {
         if (dentro_area(player.pos.x, novo_y)) {
             player.pos.y = novo_y;
         }
+        static bool ataque_antes = false;
+
+if (al_key_down(&estado, ALLEGRO_KEY_SPACE)) {
+
+    if (!ataque_antes) {
+
+        player.atacando = true;
+
+        if (skeleton.vivo &&
+            abs(player.pos.x - skeleton.pos.x) < 80 &&
+            abs(player.pos.y - skeleton.pos.y) < 80) {
+
+            skeleton.vida -= player.dano;
+
+            printf("Esqueleto tomou dano! Vida: %d\n",
+                   skeleton.vida);
+
+            if (skeleton.vida <= 0) {
+
+                skeleton.vivo = false;
+                skeleton.vida = 60;
+
+                printf("Esqueleto derrotado!\n");
+            }
+        }
+    }
+
+    ataque_antes = true;
+}
+else {
+
+    ataque_antes = false;
+    player.atacando = false;
+}
+        static bool cura_antes = false;
+
+if (al_key_down(&estado, ALLEGRO_KEY_Q)) {
+
+    if (!cura_antes) {
+
+        player.vida += 20;
+
+        if (player.vida > 100)
+            player.vida = 100;
+
+        printf("Curado! Vida: %d\n",
+               player.vida);
+    }
+
+    cura_antes = true;
+}
+else {
+
+    cura_antes = false;
+}
 
         npc_delay++;
         if (npc_delay > 30) {
@@ -230,7 +315,44 @@ int main() {
                 enter_antes = false;
             }
         }
+        if (skeleton.vivo) {
 
+    if (player.pos.x < skeleton.pos.x)
+        skeleton.pos.x -= 2;
+
+    if (player.pos.x > skeleton.pos.x)
+        skeleton.pos.x += 2;
+
+    if (player.pos.y < skeleton.pos.y)
+        skeleton.pos.y -= 2;
+
+    if (player.pos.y > skeleton.pos.y)
+        skeleton.pos.y += 2;
+}
+   static int cooldown_dano = 0;
+
+if (cooldown_dano > 0)
+    cooldown_dano--;
+
+if (skeleton.vivo &&
+    abs(player.pos.x - skeleton.pos.x) < 50 &&
+    abs(player.pos.y - skeleton.pos.y) < 50 &&
+    cooldown_dano <= 0) {
+
+    player.vida -= skeleton.dano;
+
+    cooldown_dano = 60;
+
+    printf("Player tomou dano! Vida: %d\n",
+           player.vida);
+
+    if (player.vida <= 0) {
+
+        printf("GAME OVER\n");
+
+        break;
+    }
+}
         al_clear_to_color(al_map_rgb(255, 255, 255));
 
         al_draw_scaled_bitmap(vila, 0, 0, 1536, 1024, 0, 0, 1280, 720, 0);
@@ -246,6 +368,21 @@ int main() {
         int npc_h = 341;
 
         al_draw_scaled_bitmap(velho, npc_frame * npc_w, npc_linha * npc_h, npc_w, npc_h, npc_x, npc_y, 80, 80, 0);
+        if (skeleton.vivo) {
+
+    al_draw_scaled_bitmap(
+        esqueleto_bitmap,
+        0,
+        0,
+        256,
+        256,
+        skeleton.pos.x,
+        skeleton.pos.y,
+        96,
+        96,
+        0
+    );
+}
 
         if (perto) {
             al_draw_text(font, al_map_rgb(255, 255, 255), 100, 30, 0, "Pressione E");
@@ -255,11 +392,35 @@ int main() {
             al_draw_filled_rectangle(50, 450, 750, 580, al_map_rgb(0, 0, 0));
             al_draw_text(font, al_map_rgb(255, 255, 255), 60, 460, 0, falas[fala_atual]);
         }
+        
+        al_draw_filled_rectangle(
+    20,
+    20,
+    20 + (player.vida * 2),
+    40,
+    al_map_rgb(255, 0, 0)
+);
+
+al_draw_rectangle(
+    20,
+    20,
+    220,
+    40,
+    al_map_rgb(255,255,255),
+    2
+);
 
         al_flip_display();
         al_rest(0.016);
-    }
+    } 
+    
+al_destroy_bitmap(player_bitmap);
+al_destroy_bitmap(velho);
+al_destroy_bitmap(vila);
+al_destroy_bitmap(esqueleto_bitmap);
 
+al_destroy_font(font);
+    
     al_destroy_display(display);
     return 0;
 }
