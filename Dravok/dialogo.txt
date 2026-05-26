@@ -1,3 +1,9 @@
+Player: ...
+Player: Onde eu estou?
+Player: Minha cabeça...
+Player: O que aconteceu?
+Player: ...
+Player: Talvez aquele velho possa me ajudar.
 Velho: ...
 Player: Ei!
 Player: Foi você, né?
@@ -36,6 +42,6 @@ Velho: Nada.
 Velho: Faça o que quiser.
 Velho: Mas faça alguma coisa.
 Player: ...
-Player: E você?
-Player: Vai só ficar aí?
-Velho: Esta informação não lhe convém.
+Velho: Pegue esta espada velha e essa poção de cura.
+Velho: Você vai precisar mais do que eu...
+Velho: Agora vá!
