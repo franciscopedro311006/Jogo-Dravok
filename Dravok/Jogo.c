@@ -43,7 +43,6 @@ bool dentro_area(int x, int y) {
 
     return true;
 }
-
 typedef struct {
     int x;
     int y;
@@ -124,7 +123,9 @@ int main() {
     int npc_delay = 0;
     int npc_linha = 0;
 
-    bool em_dialogo = false;
+    bool em_dialogo = true;
+    bool intro = true;
+
     bool npc_ativo = true;
 
     ALLEGRO_BITMAP* player_bitmap = al_load_bitmap("Personagem.png");
@@ -190,11 +191,15 @@ int main() {
         static bool e_antes = false;
 
         if (perto && al_key_down(&estado, ALLEGRO_KEY_E)) {
-            if (!e_antes) em_dialogo = true;
+
+            if (!e_antes && !intro && npc_ativo) {
+
+                em_dialogo = true;
+
+                fala_atual = 6;
+            }
+
             e_antes = true;
-        }
-        else {
-            e_antes = false;
         }
 
         static bool enter_antes = false;
@@ -203,10 +208,20 @@ int main() {
             if (al_key_down(&estado, ALLEGRO_KEY_ENTER)) {
                 if (!enter_antes) {
                     fala_atual++;
-                    if (fala_atual >= total_falas) {
+                    if (intro && fala_atual >= 6) {
+
                         em_dialogo = false;
-                        fala_atual = 0;
-                        //npc_ativo = false;
+
+                        intro = false;
+
+                        fala_atual = 6;
+                    }
+
+                    else if (!intro && fala_atual >= total_falas) {
+
+                        em_dialogo = false;
+
+                        npc_ativo = false;
                     }
                 }
                 enter_antes = true;
