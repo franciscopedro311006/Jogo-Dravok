@@ -56,7 +56,16 @@ typedef struct {
     int dano;
     bool vivo;
     bool atacando;
+    char nome[50];
 } Personagem;
+
+typedef struct {
+    int x;
+    int y;
+    int largura;
+    int altura;
+} Hitbox;
+
 void ordenar_npcs(Personagem npcs[], int tamanho) {
 
     for (int i = 0; i < tamanho - 1; i++) {
@@ -72,12 +81,19 @@ void ordenar_npcs(Personagem npcs[], int tamanho) {
         }
     }
 }
-typedef struct {
-    int x;
-    int y;
-    int largura;
-    int altura;
-} Hitbox;
+
+int buscar_npc_por_x(Personagem npcs[], int tamanho, int x) {
+
+    for (int i = 0; i < tamanho; i++) {
+
+        if (npcs[i].pos.x == x) {
+
+            return i;
+        }
+    }
+
+    return -1;
+}
 
 Personagem npcs[2];
 
@@ -104,17 +120,17 @@ int main() {
 
     int npc_x = 800, npc_y = 160;
 
+    npcs[0].pos.x = 800;
+    npcs[0].pos.y = 160;
+
+    strcpy_s(npcs[0].nome, sizeof(npcs[0].nome), "Velho");
+
     Personagem skeleton = { {600,300}, 0, 0 };
     skeleton.vida = 60;
     skeleton.dano = 10;
     skeleton.vivo = false;
     skeleton.atacando = false;
 
-    npcs[0].pos.x = 800;
-    npcs[0].pos.y = 160;
-
-    npcs[1].pos.x = 400;
-    npcs[1].pos.y = 200;
 
     int* numeros = malloc(10 * sizeof(int));
     for (int i = 0; i < 10; i++) numeros[i] = i;
@@ -289,8 +305,15 @@ int main() {
 
         bool perto = false;
 
-        if (npc_ativo && abs(player.pos.x - npc_x) < 40 && abs(player.pos.y - npc_y) < 40) {
-            perto = true;
+        int npc_encontrado = buscar_npc_por_x(npcs, 2, 800);
+
+        if (npc_encontrado != -1) {
+
+            if (abs(player.pos.x - npcs[npc_encontrado].pos.x) < 40 &&
+                abs(player.pos.y - npcs[npc_encontrado].pos.y) < 40) {
+
+                perto = true;
+            }
         }
 
         static bool e_antes = false;
