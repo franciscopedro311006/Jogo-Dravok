@@ -57,17 +57,17 @@ typedef struct {
     bool vivo;
     bool atacando;
 } Personagem;
-void ordenar_npcs(Personagem npcs[], int tamanho){
+void ordenar_npcs(Personagem npcs[], int tamanho) {
 
-    for(int i = 0; i < tamanho - 1; i++){
+    for (int i = 0; i < tamanho - 1; i++) {
 
-        for(int j = 0; j < tamanho - 1 - i; j++){
+        for (int j = 0; j < tamanho - 1 - i; j++) {
 
-            if(npcs[j].pos.x > npcs[j+1].pos.x){
+            if (npcs[j].pos.x > npcs[j + 1].pos.x) {
 
                 Personagem temp = npcs[j];
-                npcs[j] = npcs[j+1];
-                npcs[j+1] = temp;
+                npcs[j] = npcs[j + 1];
+                npcs[j + 1] = temp;
             }
         }
     }
@@ -83,7 +83,7 @@ Personagem npcs[2];
 
 int main() {
 
-  
+
 
     al_init();
     al_init_primitives_addon();
@@ -107,7 +107,7 @@ int main() {
     Personagem skeleton = { {600,300}, 0, 0 };
     skeleton.vida = 60;
     skeleton.dano = 10;
-    skeleton.vivo = true;
+    skeleton.vivo = false;
     skeleton.atacando = false;
 
     npcs[0].pos.x = 800;
@@ -126,7 +126,7 @@ int main() {
     free(npc_ptr);
 
     //troquei o vetor de char enorme com o dialogo por um arquivo txt com o dialogo nele;
-    char falas[100] [200];
+    char falas[100][200];
     FILE* file = fopen("dialogo.txt", "r");
     int total_falas = 0;
 
@@ -144,7 +144,7 @@ int main() {
 
     fclose(file);
 
-   
+
     int fala_atual = 0;
 
     int npc_frame = 0;
@@ -156,22 +156,47 @@ int main() {
 
     bool npc_ativo = true;
 
-    ALLEGRO_BITMAP* player_bitmap = al_load_bitmap("Personagem.png");
     ALLEGRO_BITMAP* velho = al_load_bitmap("Velho.png");
     ALLEGRO_BITMAP* vila = al_load_bitmap("Casa.jpeg");
-    ALLEGRO_BITMAP* esqueleto_bitmap = al_load_bitmap("Esqueleto.png");
-    
+
+    ALLEGRO_BITMAP* player_parado = al_load_bitmap("PersonagemParado.png");
+    ALLEGRO_BITMAP* player_andando = al_load_bitmap("PersonagemAndando.png");
+    ALLEGRO_BITMAP* player_atacando = al_load_bitmap("PersonagemAtacando.png");
+
+    ALLEGRO_BITMAP* skeleton_parado = al_load_bitmap("EsqueletoParado.png");
+    ALLEGRO_BITMAP* skeleton_andando = al_load_bitmap("EsqueletoAndando.png");
+    ALLEGRO_BITMAP* skeleton_atacando = al_load_bitmap("EsqueletoAtacando.png");
+
+    if (!player_parado || !player_andando || !player_atacando) {
+        printf("Erro ao carregar sprites do player\n");
+        return 1;
+    }
+
+    if (!skeleton_parado || !skeleton_andando || !skeleton_atacando) {
+        printf("Erro ao carregar sprites do esqueleto\n");
+        return 1;
+    }
+
+    if (!velho) {
+        printf("Erro ao carregar sprites do velho\n");
+        return 1;
+    }
+
+    if (!vila) {
+        printf("Erro ao carregar mapa da vila\n");
+        return 1;
+    }
 
     while (1) {
 
         ALLEGRO_KEYBOARD_STATE estado;
         al_get_keyboard_state(&estado);
 
-        Direcao direcao; 
+        Direcao direcao;
 
         bool andando = false;
 
-        Hitbox hit_player = {player.pos.x + 50, player.pos.y + 25, 35, 65};
+        Hitbox hit_player = { player.pos.x + 50, player.pos.y + 25, 35, 65 };
 
         int novo_x = player.pos.x;
         int novo_y = player.pos.y;
@@ -192,78 +217,73 @@ int main() {
         }
         static bool ataque_antes = false;
 
-if (al_key_down(&estado, ALLEGRO_KEY_SPACE)) {
+        if (al_key_down(&estado, ALLEGRO_KEY_SPACE)) {
 
-    if (!ataque_antes) {
+            if (!ataque_antes) {
 
-        player.atacando = true;
+                player.atacando = true;
 
-        if (skeleton.vivo &&
-            abs(player.pos.x - skeleton.pos.x) < 80 &&
-            abs(player.pos.y - skeleton.pos.y) < 80) {
+                if (skeleton.vivo && abs(player.pos.x - skeleton.pos.x) < 80 && abs(player.pos.y - skeleton.pos.y) < 80) {
 
-            skeleton.vida -= player.dano;
+                    skeleton.vida -= player.dano;
 
-            printf("Esqueleto tomou dano! Vida: %d\n",
-                   skeleton.vida);
+                    printf("Esqueleto tomou dano! Vida: %d\n", skeleton.vida);
 
-            if (skeleton.vida <= 0) {
+                    if (skeleton.vida <= 0) {
 
-                skeleton.vivo = false;
-                skeleton.vida = 60;
+                        skeleton.vivo = false;
+                        skeleton.vida = 60;
 
-                printf("Esqueleto derrotado!\n");
+                        printf("Esqueleto derrotado!\n");
+                    }
+                }
             }
-        }
-    }
 
-    ataque_antes = true;
-}
-else {
-
-    ataque_antes = false;
-    player.atacando = false;
-}
-        static bool cura_antes = false;
-
-if (al_key_down(&estado, ALLEGRO_KEY_Q)) {
-
-    if (!cura_antes) {
-
-        player.vida += 20;
-
-        if (player.vida > 100)
-            player.vida = 100;
-
-        printf("Curado! Vida: %d\n",
-               player.vida);
-    }
-
-    cura_antes = true;
-}
-else {
-
-    cura_antes = false;
-}
-
-        npc_delay++;
-        if (npc_delay > 30) {
-            npc_frame++;
-            npc_delay = 0;
-            if (npc_frame > 3) npc_frame = 0;
-        }
-
-        if (andando) {
-            frame_delay++;
-            if (frame_delay > 15) {
-                player.frame++;
-                frame_delay = 0;
-                if (player.frame > 3) player.frame = 0;
-            }
+            ataque_antes = true;
         }
         else {
-            player.frame = 0;
+
+            ataque_antes = false;
+            player.atacando = false;
         }
+        static bool cura_antes = false;
+
+        if (al_key_down(&estado, ALLEGRO_KEY_Q)) {
+
+            if (!cura_antes) {
+
+                player.vida += 20;
+
+                if (player.vida > 100)
+                    player.vida = 100;
+
+                printf("Curado! Vida: %d\n",
+                    player.vida);
+            }
+
+            cura_antes = true;
+        }
+        else {
+
+            cura_antes = false;
+        }
+
+        npc_delay++;
+
+        if (npc_delay > 10) {
+
+            npc_delay = 0;
+
+            player.frame++;
+            skeleton.frame++;
+
+            if (player.frame > 7)
+                player.frame = 0;
+
+            if (skeleton.frame > 7)
+                skeleton.frame = 0;
+        }
+
 
         if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE)) break;
 
@@ -307,6 +327,11 @@ else {
                         em_dialogo = false;
 
                         npc_ativo = false;
+
+                        skeleton.vivo = true;
+
+                        skeleton.pos.x = 120;
+                        skeleton.pos.y = 300;
                     }
                 }
                 enter_antes = true;
@@ -317,72 +342,125 @@ else {
         }
         if (skeleton.vivo) {
 
-    if (player.pos.x < skeleton.pos.x)
-        skeleton.pos.x -= 2;
+            if (player.pos.x < skeleton.pos.x)
+                skeleton.pos.x -= 2;
 
-    if (player.pos.x > skeleton.pos.x)
-        skeleton.pos.x += 2;
+            if (player.pos.x > skeleton.pos.x)
+                skeleton.pos.x += 2;
 
-    if (player.pos.y < skeleton.pos.y)
-        skeleton.pos.y -= 2;
+            if (player.pos.y < skeleton.pos.y)
+                skeleton.pos.y -= 2;
 
-    if (player.pos.y > skeleton.pos.y)
-        skeleton.pos.y += 2;
-}
-   static int cooldown_dano = 0;
+            if (player.pos.y > skeleton.pos.y)
+                skeleton.pos.y += 2;
+        }
+        static int cooldown_dano = 0;
 
-if (cooldown_dano > 0)
-    cooldown_dano--;
+        if (cooldown_dano > 0)
+            cooldown_dano--;
 
-if (skeleton.vivo &&
-    abs(player.pos.x - skeleton.pos.x) < 50 &&
-    abs(player.pos.y - skeleton.pos.y) < 50 &&
-    cooldown_dano <= 0) {
+        if (skeleton.vivo && abs(player.pos.x - skeleton.pos.x) < 50 && abs(player.pos.y - skeleton.pos.y) < 50 && cooldown_dano <= 0) {
 
-    player.vida -= skeleton.dano;
+            player.vida -= skeleton.dano;
 
-    cooldown_dano = 60;
+            cooldown_dano = 60;
 
-    printf("Player tomou dano! Vida: %d\n",
-           player.vida);
+            printf("Player tomou dano! Vida: %d\n", player.vida);
 
-    if (player.vida <= 0) {
+            if (player.vida <= 0) {
 
-        printf("GAME OVER\n");
+                printf("GAME OVER\n");
 
-        break;
-    }
-}
+                break;
+            }
+        }
         al_clear_to_color(al_map_rgb(255, 255, 255));
 
         al_draw_scaled_bitmap(vila, 0, 0, 1536, 1024, 0, 0, 1280, 720, 0);
 
-        int frame_w = 256;
-        int frame_h = 256;
+        ALLEGRO_BITMAP* sprite_player;
 
-        al_draw_scaled_bitmap(player_bitmap, player.frame * frame_w, player.linha * frame_h, frame_w, frame_h, player.pos.x, player.pos.y, 96, 96, 0);
+        if (player.atacando)
+            sprite_player = player_atacando;
 
-        al_draw_rectangle(hit_player.x, hit_player.y, hit_player.x + hit_player.largura, hit_player.y + hit_player.altura, al_map_rgb(255, 0, 0), 2);
+        else if (andando)
+            sprite_player = player_andando;
+
+        else
+            sprite_player = player_parado;
+
+        int frame_w;
+        int total_frames;
+
+        if (player.atacando) {
+            frame_w = 184;
+            total_frames = 6;
+        }
+        else if (andando) {
+            frame_w = 188;
+            total_frames = 8;
+        }
+        else {
+            frame_w = 194;
+            total_frames = 7;
+        }
+
+        int frame_h = 200;
+
+        if (player.frame >= total_frames)
+            player.frame = 0;
+
+        al_draw_scaled_bitmap(sprite_player, player.frame * frame_w, 0, frame_w, frame_h, player.pos.x, player.pos.y, 128, 128, 0);
 
         int npc_w = 256;
         int npc_h = 341;
 
         al_draw_scaled_bitmap(velho, npc_frame * npc_w, npc_linha * npc_h, npc_w, npc_h, npc_x, npc_y, 80, 80, 0);
+
         if (skeleton.vivo) {
 
-    al_draw_scaled_bitmap(
-        esqueleto_bitmap,
-        0,
-        0,
-        256,
-        256,
-        skeleton.pos.x,
-        skeleton.pos.y,
-        96,
-        96,
-        0
-    );
-}
+            ALLEGRO_BITMAP* sprite_skeleton;
+
+            bool skeleton_andando_bool = false;
+
+            if (abs(player.pos.x - skeleton.pos.x) > 10 ||
+                abs(player.pos.y - skeleton.pos.y) > 10) {
+
+                skeleton_andando_bool = true;
+            }
+
+            if (skeleton.atacando)
+                sprite_skeleton = skeleton_atacando;
+
+            else if (skeleton_andando_bool)
+                sprite_skeleton = skeleton_andando;
+
+            else
+                sprite_skeleton = skeleton_parado;
+
+            int sk_frame_w;
+            int sk_total_frames;
+
+            if (skeleton.atacando) {
+                sk_frame_w = 185;
+                sk_total_frames = 6;
+            }
+            else if (skeleton_andando_bool) {
+                sk_frame_w = 194;
+                sk_total_frames = 8;
+            }
+            else {
+                sk_frame_w = 193;
+                sk_total_frames = 7;
+            }
+
+            int sk_frame_h = 200;
+
+            if (skeleton.frame >= sk_total_frames)
+                skeleton.frame = 0;
+
+            al_draw_scaled_bitmap(sprite_skeleton, skeleton.frame * sk_frame_w, 0, sk_frame_w, sk_frame_h, skeleton.pos.x, skeleton.pos.y, 128, 128, 0 );
+        }
 
         if (perto) {
             al_draw_text(font, al_map_rgb(255, 255, 255), 100, 30, 0, "Pressione E");
@@ -392,35 +470,27 @@ if (skeleton.vivo &&
             al_draw_filled_rectangle(50, 450, 750, 580, al_map_rgb(0, 0, 0));
             al_draw_text(font, al_map_rgb(255, 255, 255), 60, 460, 0, falas[fala_atual]);
         }
-        
-        al_draw_filled_rectangle(
-    20,
-    20,
-    20 + (player.vida * 2),
-    40,
-    al_map_rgb(255, 0, 0)
-);
 
-al_draw_rectangle(
-    20,
-    20,
-    220,
-    40,
-    al_map_rgb(255,255,255),
-    2
-);
+        al_draw_filled_rectangle(20, 20, 20 + (player.vida * 2), 40, al_map_rgb(255, 0, 0));
+
+        al_draw_rectangle(20, 20, 220, 40, al_map_rgb(255, 255, 255), 2);
 
         al_flip_display();
         al_rest(0.016);
-    } 
-    
-al_destroy_bitmap(player_bitmap);
-al_destroy_bitmap(velho);
-al_destroy_bitmap(vila);
-al_destroy_bitmap(esqueleto_bitmap);
+    }
 
-al_destroy_font(font);
-    
+    al_destroy_bitmap(velho);
+    al_destroy_bitmap(vila);
+
+    al_destroy_bitmap(player_parado);
+    al_destroy_bitmap(player_andando);
+    al_destroy_bitmap(player_atacando);
+
+    al_destroy_bitmap(skeleton_parado);
+    al_destroy_bitmap(skeleton_andando);
+    al_destroy_bitmap(skeleton_atacando);
+    al_destroy_font(font);
+
     al_destroy_display(display);
     return 0;
 }
