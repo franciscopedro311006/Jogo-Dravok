@@ -95,7 +95,7 @@ int buscar_npc_por_x(Personagem npcs[], int tamanho, int x) {
     return -1;
 }
 
-Personagem npcs[2];
+Personagem npcs[1];
 
 int main() {
 
@@ -118,7 +118,7 @@ int main() {
 
     int frame_delay = 0;
 
-    int npc_x = 800, npc_y = 160;
+    int npc_x, npc_y ;
 
     npcs[0].pos.x = 800;
     npcs[0].pos.y = 160;
@@ -131,6 +131,10 @@ int main() {
     skeleton.vivo = false;
     skeleton.atacando = false;
 
+    ordenar_npcs(npcs, 1);
+
+    npc_x = npcs[0].pos.x;
+    npc_y = npcs[0].pos.y;
 
     int* numeros = malloc(10 * sizeof(int));
     for (int i = 0; i < 10; i++) numeros[i] = i;
@@ -305,7 +309,7 @@ int main() {
 
         bool perto = false;
 
-        int npc_encontrado = buscar_npc_por_x(npcs, 2, 800);
+        int npc_encontrado = buscar_npc_por_x(npcs, 1, 800);
 
         if (npc_encontrado != -1) {
 
@@ -482,7 +486,7 @@ int main() {
             if (skeleton.frame >= sk_total_frames)
                 skeleton.frame = 0;
 
-            al_draw_scaled_bitmap(sprite_skeleton, skeleton.frame * sk_frame_w, 0, sk_frame_w, sk_frame_h, skeleton.pos.x, skeleton.pos.y, 128, 128, 0 );
+            al_draw_scaled_bitmap(sprite_skeleton, skeleton.frame * sk_frame_w, 0, sk_frame_w, sk_frame_h, skeleton.pos.x, skeleton.pos.y, 128, 128, 0);
         }
 
         if (perto) {
