@@ -29,8 +29,6 @@ int mapa[8][20] = {
 
 
 bool dentro_area(int x, int y) {
-    int player_w = 96;
-    int player_h = 96;
 
     int tile_x = x / TAM;
     int tile_y = y / TAM;
@@ -51,20 +49,12 @@ typedef struct {
 typedef struct {
     Posicao pos;
     int frame;
-    int linha;
     int vida;
     int dano;
     bool vivo;
     bool atacando;
     char nome[50];
 } Personagem;
-
-typedef struct {
-    int x;
-    int y;
-    int largura;
-    int altura;
-} Hitbox;
 
 void ordenar_npcs(Personagem npcs[], int tamanho) {
 
@@ -95,11 +85,9 @@ int buscar_npc_por_x(Personagem npcs[], int tamanho, int x) {
     return -1;
 }
 
-Personagem npcs[1];
+
 
 int main() {
-
-
 
     al_init();
     al_init_primitives_addon();
@@ -110,6 +98,13 @@ int main() {
     ALLEGRO_FONT* font = al_create_builtin_font();
     ALLEGRO_DISPLAY* display = al_create_display(1280, 720);
 
+    Personagem* npcs = malloc(1 * sizeof(Personagem));
+
+    if (npcs == NULL) {
+        printf("Erro de memoria\n");
+        return 1;
+    }
+
     Personagem player = { {100, 300}, 0, 0 };
     player.vida = 100;
     player.dano = 20;
@@ -117,7 +112,6 @@ int main() {
     player.atacando = false;
 
     int frame_delay = 0;
-
     int npc_x, npc_y ;
 
     npcs[0].pos.x = 800;
@@ -136,15 +130,6 @@ int main() {
     npc_x = npcs[0].pos.x;
     npc_y = npcs[0].pos.y;
 
-    int* numeros = malloc(10 * sizeof(int));
-    for (int i = 0; i < 10; i++) numeros[i] = i;
-    free(numeros);
-
-    Personagem* npc_ptr = malloc(sizeof(Personagem));
-    npc_ptr->pos.x = 500;
-    npc_ptr->pos.y = 200;
-    free(npc_ptr);
-
     //troquei o vetor de char enorme com o dialogo por um arquivo txt com o dialogo nele;
     char falas[100][200];
     FILE* file = fopen("dialogo.txt", "r");
@@ -155,6 +140,7 @@ int main() {
         return 1;
     }
 
+    //Apaga o \n do final das frases e coloca \0
     while (fgets(falas[total_falas], 200, file) != NULL) {
 
         falas[total_falas][strcspn(falas[total_falas], "\n")] = 0;
@@ -168,8 +154,6 @@ int main() {
     int fala_atual = 0;
 
     int npc_frame = 0;
-    int npc_delay = 0;
-    int npc_linha = 0;
 
     bool em_dialogo = true;
     bool intro = true;
@@ -216,16 +200,15 @@ int main() {
 
         bool andando = false;
 
-        Hitbox hit_player = { player.pos.x + 50, player.pos.y + 25, 35, 65 };
-
         int novo_x = player.pos.x;
         int novo_y = player.pos.y;
 
+        //Movimenta o player
         if (!em_dialogo) {
-            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true; player.linha = 2; direcao = CIMA; }
-            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true; player.linha = 0; direcao = BAIXO; }
-            if (al_key_down(&estado, ALLEGRO_KEY_A)) { novo_x -= 5; andando = true; player.linha = 1; direcao = ESQUERDA; }
-            if (al_key_down(&estado, ALLEGRO_KEY_D)) { novo_x += 5; andando = true; player.linha = 3; direcao = DIREITA; }
+            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true; direcao = CIMA; }
+            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true; direcao = BAIXO; }
+            if (al_key_down(&estado, ALLEGRO_KEY_A)) { novo_x -= 5; andando = true; direcao = ESQUERDA; }
+            if (al_key_down(&estado, ALLEGRO_KEY_D)) { novo_x += 5; andando = true; direcao = DIREITA; }
         }
 
         if (dentro_area(novo_x, player.pos.y)) {
@@ -237,6 +220,7 @@ int main() {
         }
         static bool ataque_antes = false;
 
+        //Ataque do player
         if (al_key_down(&estado, ALLEGRO_KEY_SPACE)) {
 
             if (!ataque_antes) {
@@ -247,14 +231,11 @@ int main() {
 
                     skeleton.vida -= player.dano;
 
-                    printf("Esqueleto tomou dano! Vida: %d\n", skeleton.vida);
-
                     if (skeleton.vida <= 0) {
 
                         skeleton.vivo = false;
                         skeleton.vida = 60;
 
-                        printf("Esqueleto derrotado!\n");
                     }
                 }
             }
@@ -268,6 +249,7 @@ int main() {
         }
         static bool cura_antes = false;
 
+        //Recupera 20 da vida, como se fosse uma poção de cura
         if (al_key_down(&estado, ALLEGRO_KEY_Q)) {
 
             if (!cura_antes) {
@@ -277,8 +259,6 @@ int main() {
                 if (player.vida > 100)
                     player.vida = 100;
 
-                printf("Curado! Vida: %d\n",
-                    player.vida);
             }
 
             cura_antes = true;
@@ -288,38 +268,47 @@ int main() {
             cura_antes = false;
         }
 
-        npc_delay++;
+        //Controla os frames do jogador, npc e inimigo 
+        frame_delay++;
 
-        if (npc_delay > 10) {
+        if (frame_delay >= 8) {
 
-            npc_delay = 0;
+            frame_delay = 0;
 
-            player.frame++;
-            skeleton.frame++;
-
-            if (player.frame > 7)
+            if (andando || player.atacando)
+                player.frame++;
+            else
                 player.frame = 0;
 
-            if (skeleton.frame > 7)
+            if (skeleton.vivo)
+                skeleton.frame++;
+            else
                 skeleton.frame = 0;
+
+            npc_frame++;
+            if (npc_frame > 3)
+                npc_frame = 0;
         }
 
 
+        //Trava o ataque para o dilaogo
         if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE)) break;
 
+
+        //Verificação de distancia entre o player e o npc
         bool perto = false;
 
         int npc_encontrado = buscar_npc_por_x(npcs, 1, 800);
 
         if (npc_encontrado != -1) {
 
-            if (abs(player.pos.x - npcs[npc_encontrado].pos.x) < 40 &&
-                abs(player.pos.y - npcs[npc_encontrado].pos.y) < 40) {
+            if (abs(player.pos.x - npcs[npc_encontrado].pos.x) < 40 && abs(player.pos.y - npcs[npc_encontrado].pos.y) < 40) {
 
                 perto = true;
             }
         }
 
+        //Inicia o dialogo com o npc
         static bool e_antes = false;
 
         if (perto && al_key_down(&estado, ALLEGRO_KEY_E)) {
@@ -334,6 +323,7 @@ int main() {
             e_antes = true;
         }
 
+        //Controla o Dialogo com o npc
         static bool enter_antes = false;
 
         if (em_dialogo) {
@@ -367,6 +357,8 @@ int main() {
                 enter_antes = false;
             }
         }
+        
+        //Algoritmo para fazer o inimigo perseguir
         if (skeleton.vivo) {
 
             if (player.pos.x < skeleton.pos.x)
@@ -381,18 +373,27 @@ int main() {
             if (player.pos.y > skeleton.pos.y)
                 skeleton.pos.y += 2;
         }
+
         static int cooldown_dano = 0;
 
+        //Controla o ataque/dano do inimigo
         if (cooldown_dano > 0)
             cooldown_dano--;
+
+        if (skeleton.vivo && abs(player.pos.x - skeleton.pos.x) < 50 && abs(player.pos.y - skeleton.pos.y) < 50) {
+
+            skeleton.atacando = true;
+        }
+        else {
+
+            skeleton.atacando = false;
+        }
 
         if (skeleton.vivo && abs(player.pos.x - skeleton.pos.x) < 50 && abs(player.pos.y - skeleton.pos.y) < 50 && cooldown_dano <= 0) {
 
             player.vida -= skeleton.dano;
 
             cooldown_dano = 60;
-
-            printf("Player tomou dano! Vida: %d\n", player.vida);
 
             if (player.vida <= 0) {
 
@@ -442,7 +443,7 @@ int main() {
         int npc_w = 256;
         int npc_h = 341;
 
-        al_draw_scaled_bitmap(velho, npc_frame * npc_w, npc_linha * npc_h, npc_w, npc_h, npc_x, npc_y, 80, 80, 0);
+        al_draw_scaled_bitmap(velho, npc_frame * npc_w, 0, npc_w, npc_h, npc_x, npc_y, 80, 80, 0);
 
         if (skeleton.vivo) {
 
@@ -450,11 +451,10 @@ int main() {
 
             bool skeleton_andando_bool = false;
 
-            if (abs(player.pos.x - skeleton.pos.x) > 10 ||
-                abs(player.pos.y - skeleton.pos.y) > 10) {
+            if (abs(player.pos.x - skeleton.pos.x) > 10 || abs(player.pos.y - skeleton.pos.y) > 10) {
 
-                skeleton_andando_bool = true;
-            }
+               skeleton_andando_bool = true;
+           }
 
             if (skeleton.atacando)
                 sprite_skeleton = skeleton_atacando;
@@ -506,6 +506,7 @@ int main() {
         al_rest(0.016);
     }
 
+    free(npcs);
     al_destroy_bitmap(velho);
     al_destroy_bitmap(vila);
 
@@ -516,8 +517,7 @@ int main() {
     al_destroy_bitmap(skeleton_parado);
     al_destroy_bitmap(skeleton_andando);
     al_destroy_bitmap(skeleton_atacando);
-    al_destroy_font(font);
-
     al_destroy_display(display);
+    al_destroy_font(font);
     return 0;
 }
