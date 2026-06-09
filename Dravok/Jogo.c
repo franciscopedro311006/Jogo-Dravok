@@ -8,8 +8,6 @@
 #include <allegro5/allegro_image.h>
 
 typedef enum {
-    CIMA,
-    BAIXO,
     ESQUERDA,
     DIREITA
 } Direcao;
@@ -19,7 +17,7 @@ typedef enum {
 int mapa[8][20] = {
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
     {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-    {1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1},
+    {1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
     {1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1},
@@ -56,34 +54,71 @@ typedef struct {
     char nome[50];
 } Personagem;
 
-void ordenar_npcs(Personagem npcs[], int tamanho) {
+void ordenar_inventario(char inventario[][30], int tamanho) {
 
     for (int i = 0; i < tamanho - 1; i++) {
 
         for (int j = 0; j < tamanho - 1 - i; j++) {
 
-            if (npcs[j].pos.x > npcs[j + 1].pos.x) {
+            if (strcmp(inventario[j], inventario[j + 1]) > 0) {
 
-                Personagem temp = npcs[j];
-                npcs[j] = npcs[j + 1];
-                npcs[j + 1] = temp;
+                char temp[30];
+
+                strcpy_s(temp, sizeof(temp), inventario[j]);
+                strcpy_s(inventario[j], 30, inventario[j + 1]);
+                strcpy_s(inventario[j + 1], 30, temp);
             }
         }
     }
 }
 
-int buscar_npc_por_x(Personagem npcs[], int tamanho, int x) {
+int buscar_npc_mais_proximo(Personagem npcs[],
+    int tamanho,
+    Personagem player)
+{
+    int indice = -1;
+    int menor_distancia = 999999;
 
     for (int i = 0; i < tamanho; i++) {
 
-        if (npcs[i].pos.x == x) {
+        int distancia =
+            abs(player.pos.x - npcs[i].pos.x) +
+            abs(player.pos.y - npcs[i].pos.y);
 
-            return i;
+        if (distancia < menor_distancia) {
+
+            menor_distancia = distancia;
+            indice = i;
         }
     }
 
-    return -1;
+    return indice;
 }
+
+void adicionar_item(
+    char (**inventario)[30],
+    int* total_itens,
+    char novo_item[])
+{
+    (*total_itens)++;
+
+    *inventario = realloc(
+        *inventario,
+        (*total_itens) * sizeof(**inventario)
+    );
+
+    if (*inventario == NULL) {
+        printf("Erro ao expandir inventario\n");
+        exit(1);
+    }
+
+    strcpy_s(
+        (*inventario)[*total_itens - 1],
+        30,
+        novo_item
+    );
+}
+
 
 
 
@@ -98,12 +133,29 @@ int main() {
     ALLEGRO_FONT* font = al_create_builtin_font();
     ALLEGRO_DISPLAY* display = al_create_display(1280, 720);
 
-    Personagem* npcs = malloc(1 * sizeof(Personagem));
+    int total_npcs = 1;
+
+    int total_itens = 5;
+
+    char (*inventario)[30] = malloc(total_itens * sizeof(*inventario));
+
+    if (inventario == NULL) {
+        printf("Erro de memoria\n");
+        return 1;
+    }
+
+    Personagem* npcs = malloc(total_npcs * sizeof(Personagem));
 
     if (npcs == NULL) {
         printf("Erro de memoria\n");
         return 1;
     }
+
+    strcpy_s(inventario[0], 30, "Pocao");
+    strcpy_s(inventario[1], 30, "Espada");
+    strcpy_s(inventario[2], 30, "Arco");
+    strcpy_s(inventario[3], 30, "Escudo");
+    strcpy_s(inventario[4], 30, "Maca");
 
     Personagem player = { {100, 300}, 0, 0 };
     player.vida = 100;
@@ -117,15 +169,13 @@ int main() {
     npcs[0].pos.x = 800;
     npcs[0].pos.y = 160;
 
-    strcpy_s(npcs[0].nome, sizeof(npcs[0].nome), "Velho");
+    strcpy_s(npcs[0].nome, sizeof(npcs[0].nome),"Velho");
 
     Personagem skeleton = { {600,300}, 0, 0 };
     skeleton.vida = 60;
     skeleton.dano = 10;
     skeleton.vivo = false;
     skeleton.atacando = false;
-
-    ordenar_npcs(npcs, 1);
 
     npc_x = npcs[0].pos.x;
     npc_y = npcs[0].pos.y;
@@ -150,6 +200,9 @@ int main() {
 
     fclose(file);
 
+    Direcao direcao = DIREITA;
+
+    Direcao direcao_skeleton = DIREITA;
 
     int fala_atual = 0;
 
@@ -157,26 +210,30 @@ int main() {
 
     bool em_dialogo = true;
     bool intro = true;
-
+    bool inventario_aberto = false;
     bool npc_ativo = true;
 
     ALLEGRO_BITMAP* velho = al_load_bitmap("Velho.png");
     ALLEGRO_BITMAP* vila = al_load_bitmap("Casa.jpeg");
-
+   
     ALLEGRO_BITMAP* player_parado = al_load_bitmap("PersonagemParado.png");
-    ALLEGRO_BITMAP* player_andando = al_load_bitmap("PersonagemAndando.png");
-    ALLEGRO_BITMAP* player_atacando = al_load_bitmap("PersonagemAtacando.png");
+    ALLEGRO_BITMAP* player_andando_esquerda = al_load_bitmap("PersonagemAndandoEsquerda.png");
+    ALLEGRO_BITMAP* player_andando_direita = al_load_bitmap("PersonagemAndandoDireita.png");
+    ALLEGRO_BITMAP* player_atacando_direita= al_load_bitmap("PersonagemAtacandoDireita.png");
+    ALLEGRO_BITMAP* player_atacando_esquerda = al_load_bitmap("PersonagemAtacandoEsquerda.png");
 
     ALLEGRO_BITMAP* skeleton_parado = al_load_bitmap("EsqueletoParado.png");
-    ALLEGRO_BITMAP* skeleton_andando = al_load_bitmap("EsqueletoAndando.png");
-    ALLEGRO_BITMAP* skeleton_atacando = al_load_bitmap("EsqueletoAtacando.png");
+    ALLEGRO_BITMAP* skeleton_andando_esquerda = al_load_bitmap("EsqueletoAndandoEsquerda.png");
+    ALLEGRO_BITMAP* skeleton_andando_direita = al_load_bitmap("EsqueletoAndandoDireita.png");
+    ALLEGRO_BITMAP* skeleton_atacando_direita = al_load_bitmap("EsqueletoAtacandoDireita.png");
+    ALLEGRO_BITMAP* skeleton_atacando_esquerda = al_load_bitmap("EsqueletoAtacandoEsquerda.png");
 
-    if (!player_parado || !player_andando || !player_atacando) {
+    if (!player_parado || !player_andando_direita || !player_andando_esquerda || !player_atacando_direita || !player_atacando_esquerda) {
         printf("Erro ao carregar sprites do player\n");
         return 1;
     }
 
-    if (!skeleton_parado || !skeleton_andando || !skeleton_atacando) {
+    if (!skeleton_parado || !skeleton_andando_direita || !skeleton_andando_esquerda || !skeleton_atacando_direita || !skeleton_atacando_esquerda) {
         printf("Erro ao carregar sprites do esqueleto\n");
         return 1;
     }
@@ -187,7 +244,7 @@ int main() {
     }
 
     if (!vila) {
-        printf("Erro ao carregar mapa da vila\n");
+        printf("Erro ao carregar mapas\n");
         return 1;
     }
 
@@ -196,8 +253,6 @@ int main() {
         ALLEGRO_KEYBOARD_STATE estado;
         al_get_keyboard_state(&estado);
 
-        Direcao direcao;
-
         bool andando = false;
 
         int novo_x = player.pos.x;
@@ -205,8 +260,8 @@ int main() {
 
         //Movimenta o player
         if (!em_dialogo) {
-            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true; direcao = CIMA; }
-            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true; direcao = BAIXO; }
+            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true;}
+            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true;}
             if (al_key_down(&estado, ALLEGRO_KEY_A)) { novo_x -= 5; andando = true; direcao = ESQUERDA; }
             if (al_key_down(&estado, ALLEGRO_KEY_D)) { novo_x += 5; andando = true; direcao = DIREITA; }
         }
@@ -218,6 +273,40 @@ int main() {
         if (dentro_area(player.pos.x, novo_y)) {
             player.pos.y = novo_y;
         }
+
+        static bool i_antes = false;
+
+        if (al_key_down(&estado, ALLEGRO_KEY_I)) {
+
+            if (!i_antes) {
+
+                inventario_aberto = !inventario_aberto;
+            }
+
+            i_antes = true;
+        }
+        else {
+
+            i_antes = false;
+        }
+
+        static bool o_antes = false;
+
+        if (inventario_aberto &&
+            al_key_down(&estado, ALLEGRO_KEY_O)) {
+
+            if (!o_antes) {
+
+                ordenar_inventario(inventario, total_itens);
+            }
+
+            o_antes = true;
+        }
+        else {
+
+            o_antes = false;
+        }
+
         static bool ataque_antes = false;
 
         //Ataque do player
@@ -235,6 +324,12 @@ int main() {
 
                         skeleton.vivo = false;
                         skeleton.vida = 60;
+
+                        adicionar_item(
+                            &inventario,
+                            &total_itens,
+                            "Machado"
+                        );
 
                     }
                 }
@@ -290,15 +385,14 @@ int main() {
                 npc_frame = 0;
         }
 
-
-        //Trava o ataque para o dilaogo
+        //Fecha o jogo com esc
         if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE)) break;
 
 
         //Verificação de distancia entre o player e o npc
         bool perto = false;
 
-        int npc_encontrado = buscar_npc_por_x(npcs, 1, 800);
+        int npc_encontrado = buscar_npc_mais_proximo(npcs, total_npcs, player);
 
         if (npc_encontrado != -1) {
 
@@ -408,14 +502,27 @@ int main() {
 
         ALLEGRO_BITMAP* sprite_player;
 
-        if (player.atacando)
-            sprite_player = player_atacando;
 
-        else if (andando)
-            sprite_player = player_andando;
+        if (player.atacando) {
 
-        else
+            if (direcao == DIREITA)
+                sprite_player = player_atacando_direita;
+            else
+                sprite_player = player_atacando_esquerda;
+        }
+        else if (andando) {
+
+            if (direcao == ESQUERDA)
+                sprite_player = player_andando_esquerda;
+            else
+                sprite_player = player_andando_direita;
+        }
+        else {
+
             sprite_player = player_parado;
+        }
+
+        
 
         int frame_w;
         int total_frames;
@@ -445,6 +552,20 @@ int main() {
 
         al_draw_scaled_bitmap(velho, npc_frame * npc_w, 0, npc_w, npc_h, npc_x, npc_y, 80, 80, 0);
 
+        if (inventario_aberto) {
+
+            al_draw_filled_rectangle(300, 100, 700, 500, al_map_rgb(40, 40, 40));
+
+            al_draw_text( font, al_map_rgb(255, 255, 255), 320, 120, 0, "Inventario");
+
+            for (int i = 0; i < total_itens; i++) {
+
+                al_draw_text( font, al_map_rgb(255, 255, 255), 320, 170 + i * 30, 0, inventario[i]);
+            }
+
+            al_draw_text( font, al_map_rgb(255, 255, 0), 320, 420, 0, "Pressione O para ordenar");
+        }
+
         if (skeleton.vivo) {
 
             ALLEGRO_BITMAP* sprite_skeleton;
@@ -453,17 +574,32 @@ int main() {
 
             if (abs(player.pos.x - skeleton.pos.x) > 10 || abs(player.pos.y - skeleton.pos.y) > 10) {
 
-               skeleton_andando_bool = true;
-           }
+                skeleton_andando_bool = true;
+            }
 
-            if (skeleton.atacando)
-                sprite_skeleton = skeleton_atacando;
-
-            else if (skeleton_andando_bool)
-                sprite_skeleton = skeleton_andando;
-
+            if (player.pos.x < skeleton.pos.x)
+                direcao_skeleton = ESQUERDA;
             else
+                direcao_skeleton = DIREITA;
+
+            if (skeleton.atacando) {
+
+                if (direcao_skeleton == DIREITA)
+                    sprite_skeleton = skeleton_atacando_direita;
+                else
+                    sprite_skeleton = skeleton_atacando_esquerda;
+            }
+            else if (skeleton_andando_bool) {
+
+                if (direcao_skeleton == ESQUERDA)
+                    sprite_skeleton = skeleton_andando_esquerda;
+                else
+                    sprite_skeleton = skeleton_andando_direita;
+            }
+            else {
+
                 sprite_skeleton = skeleton_parado;
+            }
 
             int sk_frame_w;
             int sk_total_frames;
@@ -490,7 +626,7 @@ int main() {
         }
 
         if (perto) {
-            al_draw_text(font, al_map_rgb(255, 255, 255), 100, 30, 0, "Pressione E");
+            al_draw_text(font, al_map_rgb(255, 255, 255), 800, 150, 0, "Pressione E");
         }
 
         if (em_dialogo) {
@@ -507,16 +643,23 @@ int main() {
     }
 
     free(npcs);
+    free(inventario);
     al_destroy_bitmap(velho);
     al_destroy_bitmap(vila);
 
     al_destroy_bitmap(player_parado);
-    al_destroy_bitmap(player_andando);
-    al_destroy_bitmap(player_atacando);
+    al_destroy_bitmap(player_andando_direita);
+    al_destroy_bitmap(player_andando_esquerda);
+
+    al_destroy_bitmap(player_atacando_direita);
+    al_destroy_bitmap(player_atacando_esquerda);
 
     al_destroy_bitmap(skeleton_parado);
-    al_destroy_bitmap(skeleton_andando);
-    al_destroy_bitmap(skeleton_atacando);
+    al_destroy_bitmap(skeleton_andando_direita);
+    al_destroy_bitmap(skeleton_andando_esquerda);
+
+    al_destroy_bitmap(skeleton_atacando_direita);
+    al_destroy_bitmap(skeleton_atacando_esquerda);
     al_destroy_display(display);
     al_destroy_font(font);
     return 0;
