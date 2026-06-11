@@ -1,126 +1,11 @@
+#include "jogo.h"
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
-
-typedef enum {
-    ESQUERDA,
-    DIREITA
-} Direcao;
-
-#define TAM 64
-
-int mapa[8][20] = {
-    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1},
-    {1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
-    {1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1},
-    {1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1},
-    {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}
-};
-
-
-bool dentro_area(int x, int y) {
-
-    int tile_x = x / TAM;
-    int tile_y = y / TAM;
-
-    if (tile_x < 0 || tile_x >= 20 || tile_y < 0 || tile_y >= 8)
-        return false;
-
-    if (mapa[tile_y][tile_x] == 1)
-        return false;
-
-    return true;
-}
-typedef struct {
-    int x;
-    int y;
-} Posicao;
-
-typedef struct {
-    Posicao pos;
-    int frame;
-    int vida;
-    int dano;
-    bool vivo;
-    bool atacando;
-    char nome[50];
-} Personagem;
-
-void ordenar_inventario(char inventario[][30], int tamanho) {
-
-    for (int i = 0; i < tamanho - 1; i++) {
-
-        for (int j = 0; j < tamanho - 1 - i; j++) {
-
-            if (strcmp(inventario[j], inventario[j + 1]) > 0) {
-
-                char temp[30];
-
-                strcpy_s(temp, sizeof(temp), inventario[j]);
-                strcpy_s(inventario[j], 30, inventario[j + 1]);
-                strcpy_s(inventario[j + 1], 30, temp);
-            }
-        }
-    }
-}
-
-int buscar_npc_mais_proximo(Personagem npcs[],
-    int tamanho,
-    Personagem player)
-{
-    int indice = -1;
-    int menor_distancia = 999999;
-
-    for (int i = 0; i < tamanho; i++) {
-
-        int distancia =
-            abs(player.pos.x - npcs[i].pos.x) +
-            abs(player.pos.y - npcs[i].pos.y);
-
-        if (distancia < menor_distancia) {
-
-            menor_distancia = distancia;
-            indice = i;
-        }
-    }
-
-    return indice;
-}
-
-void adicionar_item(
-    char (**inventario)[30],
-    int* total_itens,
-    char novo_item[])
-{
-    (*total_itens)++;
-
-    *inventario = realloc(
-        *inventario,
-        (*total_itens) * sizeof(**inventario)
-    );
-
-    if (*inventario == NULL) {
-        printf("Erro ao expandir inventario\n");
-        exit(1);
-    }
-
-    strcpy_s(
-        (*inventario)[*total_itens - 1],
-        30,
-        novo_item
-    );
-}
-
-
-
 
 int main() {
 
@@ -164,12 +49,12 @@ int main() {
     player.atacando = false;
 
     int frame_delay = 0;
-    int npc_x, npc_y ;
+    int npc_x, npc_y;
 
     npcs[0].pos.x = 800;
     npcs[0].pos.y = 160;
 
-    strcpy_s(npcs[0].nome, sizeof(npcs[0].nome),"Velho");
+    strcpy_s(npcs[0].nome, sizeof(npcs[0].nome), "Velho");
 
     Personagem skeleton = { {600,300}, 0, 0 };
     skeleton.vida = 60;
@@ -181,9 +66,13 @@ int main() {
     npc_y = npcs[0].pos.y;
 
     //troquei o vetor de char enorme com o dialogo por um arquivo txt com o dialogo nele;
-    char falas[100][200];
     FILE* file = fopen("dialogo.txt", "r");
-    int total_falas = 0;
+
+    FilaDialogo dialogo;
+
+    dialogo.inicio = 0;
+
+    dialogo.fim = 0;
 
     if (file == NULL) {
         printf("Erro ao abrir dialogo.txt");
@@ -191,11 +80,13 @@ int main() {
     }
 
     //Apaga o \n do final das frases e coloca \0
-    while (fgets(falas[total_falas], 200, file) != NULL) {
+    char linha[200];
 
-        falas[total_falas][strcspn(falas[total_falas], "\n")] = 0;
+    while (fgets(linha,200,file)) {
 
-        total_falas++;
+        linha[strcspn(linha,"\n")] = 0;
+
+        enfileirar(&dialogo,linha);
     }
 
     fclose(file);
@@ -204,7 +95,6 @@ int main() {
 
     Direcao direcao_skeleton = DIREITA;
 
-    int fala_atual = 0;
 
     int npc_frame = 0;
 
@@ -215,11 +105,11 @@ int main() {
 
     ALLEGRO_BITMAP* velho = al_load_bitmap("Velho.png");
     ALLEGRO_BITMAP* vila = al_load_bitmap("Casa.jpeg");
-   
+
     ALLEGRO_BITMAP* player_parado = al_load_bitmap("PersonagemParado.png");
     ALLEGRO_BITMAP* player_andando_esquerda = al_load_bitmap("PersonagemAndandoEsquerda.png");
     ALLEGRO_BITMAP* player_andando_direita = al_load_bitmap("PersonagemAndandoDireita.png");
-    ALLEGRO_BITMAP* player_atacando_direita= al_load_bitmap("PersonagemAtacandoDireita.png");
+    ALLEGRO_BITMAP* player_atacando_direita = al_load_bitmap("PersonagemAtacandoDireita.png");
     ALLEGRO_BITMAP* player_atacando_esquerda = al_load_bitmap("PersonagemAtacandoEsquerda.png");
 
     ALLEGRO_BITMAP* skeleton_parado = al_load_bitmap("EsqueletoParado.png");
@@ -260,8 +150,8 @@ int main() {
 
         //Movimenta o player
         if (!em_dialogo) {
-            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true;}
-            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true;}
+            if (al_key_down(&estado, ALLEGRO_KEY_W)) { novo_y -= 5; andando = true; }
+            if (al_key_down(&estado, ALLEGRO_KEY_S)) { novo_y += 5; andando = true; }
             if (al_key_down(&estado, ALLEGRO_KEY_A)) { novo_x -= 5; andando = true; direcao = ESQUERDA; }
             if (al_key_down(&estado, ALLEGRO_KEY_D)) { novo_x += 5; andando = true; direcao = DIREITA; }
         }
@@ -344,7 +234,7 @@ int main() {
         }
         static bool cura_antes = false;
 
-        //Recupera 20 da vida, como se fosse uma poção de cura
+        //Recupera 20 da vida, como se fosse uma poÃ§Ã£o de cura
         if (al_key_down(&estado, ALLEGRO_KEY_Q)) {
 
             if (!cura_antes) {
@@ -389,7 +279,7 @@ int main() {
         if (al_key_down(&estado, ALLEGRO_KEY_ESCAPE)) break;
 
 
-        //Verificação de distancia entre o player e o npc
+        //VerificaÃ§Ã£o de distancia entre o player e o npc
         bool perto = false;
 
         int npc_encontrado = buscar_npc_mais_proximo(npcs, total_npcs, player);
@@ -411,7 +301,7 @@ int main() {
 
                 em_dialogo = true;
 
-                fala_atual = 6;
+                dialogo.inicio = 6;
             }
 
             e_antes = true;
@@ -423,17 +313,17 @@ int main() {
         if (em_dialogo) {
             if (al_key_down(&estado, ALLEGRO_KEY_ENTER)) {
                 if (!enter_antes) {
-                    fala_atual++;
-                    if (intro && fala_atual >= 6) {
+                    desenfileirar(&dialogo);
+                    if (intro && dialogo.inicio >= 6) {
 
                         em_dialogo = false;
 
                         intro = false;
 
-                        fala_atual = 6;
+                        dialogo.inicio = 6;
                     }
 
-                    else if (!intro && fala_atual >= total_falas) {
+                    if (!intro && dialogo.inicio >= dialogo.fim) {
 
                         em_dialogo = false;
 
@@ -451,7 +341,7 @@ int main() {
                 enter_antes = false;
             }
         }
-        
+
         //Algoritmo para fazer o inimigo perseguir
         if (skeleton.vivo) {
 
@@ -522,7 +412,7 @@ int main() {
             sprite_player = player_parado;
         }
 
-        
+
 
         int frame_w;
         int total_frames;
@@ -556,14 +446,14 @@ int main() {
 
             al_draw_filled_rectangle(300, 100, 700, 500, al_map_rgb(40, 40, 40));
 
-            al_draw_text( font, al_map_rgb(255, 255, 255), 320, 120, 0, "Inventario");
+            al_draw_text(font, al_map_rgb(255, 255, 255), 320, 120, 0, "Inventario");
 
             for (int i = 0; i < total_itens; i++) {
 
-                al_draw_text( font, al_map_rgb(255, 255, 255), 320, 170 + i * 30, 0, inventario[i]);
+                al_draw_text(font, al_map_rgb(255, 255, 255), 320, 170 + i * 30, 0, inventario[i]);
             }
 
-            al_draw_text( font, al_map_rgb(255, 255, 0), 320, 420, 0, "Pressione O para ordenar");
+            al_draw_text(font, al_map_rgb(255, 255, 0), 320, 420, 0, "Pressione O para ordenar");
         }
 
         if (skeleton.vivo) {
@@ -631,7 +521,7 @@ int main() {
 
         if (em_dialogo) {
             al_draw_filled_rectangle(50, 450, 750, 580, al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), 60, 460, 0, falas[fala_atual]);
+            al_draw_text(font, al_map_rgb(255, 255, 255), 60, 460, 0, fala_atual(&dialogo));
         }
 
         al_draw_filled_rectangle(20, 20, 20 + (player.vida * 2), 40, al_map_rgb(255, 0, 0));
