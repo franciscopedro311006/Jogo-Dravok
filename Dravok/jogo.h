@@ -18,6 +18,7 @@ typedef struct {
     bool atacando;
     char nome[50];
 } Personagem;
+<<<<<<< HEAD
 typedef struct {
 
     char falas[100][200];
@@ -27,6 +28,8 @@ typedef struct {
     int fim;
 
 } FilaDialogo;
+=======
+>>>>>>> 47100fc39b37891aa7217314a180c1a49c088e7f
 bool dentro_area(int x, int y);
 void ordenar_inventario(char inventario[][30], int tamanho);
 int buscar_npc_mais_proximo(
@@ -39,9 +42,12 @@ void adicionar_item(
     int* total_itens,
     char novo_item[]
 );
+<<<<<<< HEAD
 
 void enfileirar(FilaDialogo* fila, char texto[]);
 void desenfileirar(FilaDialogo* fila);
 char* fala_atual(FilaDialogo* fila);
 
+=======
+>>>>>>> 47100fc39b37891aa7217314a180c1a49c088e7f
 #endif

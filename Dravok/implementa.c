@@ -26,6 +26,7 @@ bool dentro_area(int x, int y) {
 
     return true;
 }
+<<<<<<< HEAD
 
 void enfileirar( FilaDialogo* fila, char texto[]){
     if (fila->fim < 100) {
@@ -47,6 +48,8 @@ char* fala_atual( FilaDialogo* fila){
     return "";
 }
 
+=======
+>>>>>>> 47100fc39b37891aa7217314a180c1a49c088e7f
 void ordenar_inventario(char inventario[][30], int tamanho) {
 
     for (int i = 0; i < tamanho - 1; i++) {
@@ -108,5 +111,8 @@ void adicionar_item(
         30,
         novo_item
     );
+<<<<<<< HEAD
 
+=======
+>>>>>>> 47100fc39b37891aa7217314a180c1a49c088e7f
 }
